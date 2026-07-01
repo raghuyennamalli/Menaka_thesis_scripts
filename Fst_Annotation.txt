@@ -1,0 +1,16 @@
+#Convert Fst to Bed format
+awk 'NR>1 {print $1"\t"($2-1)"\t"$2"\t"$3}' fst.txt > fst.bed
+
+#Intersect with annotation file
+bedtools intersect -a fst.bed -b genomic.gtf -wa -wb > fst_intersect.tsv
+
+#Extract the gene names
+awk -F'\t' '{
+    match($NF, /gene "[^"]+"/, arr);
+    gene = (arr[0] != "") ? substr(arr[0], 7, length(arr[0])-7) : "NA";
+    print $1"\t"$3"\t"$4"\t"gene;
+}' fst_intersect.tsv > fst_gene_annotated.tsv
+
+#To remove duplicates
+sort fst_gene_annotated.tsv | uniq > fst_gene_annotated_unique.tsv
+

@@ -1,0 +1,63 @@
+#To merge vcf files from multiple samples
+bcftools merge file1.vcf.gz file2.vcf.gz.. file10.vcf.gz -Oz -o merged.vcf.gz
+bcftools index merged.vcf.gz
+
+#To convert vcf to plink
+plink --vcf merged.vcf.gz --make-bed --out Breed --allow-extra-chr
+
+#QC 
+plink --bfile Breed --geno 0.1 --maf 0.05 --make-bed --out Breed_qc --allow-extra-chr
+
+#Calculate ROH
+plink --bfile Breed_qc  --homozyg --homozyg-window-snp 50 --homozyg-snp 50 --homozyg-kb 1000 --homozyg-density 50 --homozyg-gap 1000 --out Breed_ROH --allow-extra-chr
+
+#Calculate FROH
+# per-individual FROH (autosome = 2,600,000 kb)
+awk 'NR>1{ printf "%s\t%s\t%.0f\t%.6f\n",$1,$2,$5,$5/2600000 }' Gir20_ROH.hom.indiv \
+  > Gir20_froh_per_individual.txt
+
+# Add header
+sed -i '1iFID\tIID\tTotal_ROH_kb\tFROH' Gir20_froh_per_individual.txt
+
+#To calculate ROH island
+
+#1.create bed format
+awk '{print $4"\t"$7"\t"$8"\t"$2}' Gir20_ROH.hom > Gir20_roh.bed
+#To remove header
+tail -n +2 Gir20_roh.bed > Gir20_roh_clean.bed
+
+#2.Get the length data
+samtools faidx GCF_002263795.3_ARS-UCD2.0_genomic.fna
+cut -f1,2 GCF_002263795.3_ARS-UCD2.0_genomic.fna.fai > genome.txt
+
+#3.To make windows across genome
+bedtools makewindows -g genome.txt -w 50000 > genome_windows.bed
+
+#4.To count overlaps
+bedtools intersect -a genome_windows.bed -b Gir20_roh_clean.bed -c > Gir20_roh_overlap.bed
+
+#5.To get overlaps having more than 50 % of populations
+awk '$4>=10' Gir20_roh_overlap.bed > gir20_roh_islands.bed
+
+#6.Merge overlaps to reduce multiple entries
+bedtools merge -i gir20_roh_islands.bed > gir20_roh_islands_merged.bed
+
+#7.To annot the overlaps
+bedtools intersect -a gir20_roh_islands.bed -b genes.clean.bed -wa -wb > gir20_rohi_annot_v1.txt
+
+#RAISD-Annotation (after run with bed_script.py and chrom_mapping.py)
+
+#Clean the bed file
+tail -n +2 RAiSD_mu_Kangayam_chr.bed | awk '{print $1"\t"$2"\t"$3"\t"$4}' > RAiSD_mu_Kangayam_clean.bed
+
+#Annotate them
+bedtools intersect -a RAiSD_mu_Kangayam_clean.bed -b genes.clean.bed -wa -wb > Kangayam_RAiSD_Annot.tsv
+
+#To find the top1 % region and immune annotation
+df_imm=pd.read_csv('Final_Immune_List.csv')
+df_kg_mu=pd.read_csv('Kangayam_RAiSD_Annot.tsv', sep='\t')
+df_kg_mu_imm=pd.merge(df_kg_mu, df_imm, on='Gene', how='left')
+cutoff = df_kg_mu_imm["mu"].quantile(0.99)
+top1 = df_kg_mu_imm[df_kg_mu_imm["mu"] >= cutoff]
+top1.t_csv('top1_KG_mu_Annot.csv', index=False)
+

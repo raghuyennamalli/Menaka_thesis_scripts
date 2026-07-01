@@ -1,0 +1,26 @@
+#Download latest release of bos taurus variation
+wget https://ftp.ensembl.org/pub/release-115/variation/vcf/bos_taurus/bos_taurus.vcf.gz
+wget https://ftp.ensembl.org/pub/release-115/variation/vcf/bos_taurus/bos_taurus.vcf.gz.tbi
+
+#Extract the per sample from multi-sample VCF file
+bcftools view -s KangayamL1 All_merged_SNP.vcf.gz -o KangayamL1.vcf.gz -O z
+
+#Extract only the genotype filled as it is extracted from multi-sample file
+bcftools view -i 'GT!="./."' KangayamL1.vcf.gz -O z -o KGL1_gt.vcf.gz
+
+#Rename the accession id with chromosome number as the bos taurus variant file have chromosome number
+bcftools annotate --rename-chrs chr_map.txt KGL1_gt.vcf.gz -Oz -o KGL1_renam.vcf.gz
+bcftools index KGL1_renam.vcf.gz
+
+#Matching the rsID of bos taurus with our sample
+bcftools annotate -a bos_taurus.vcf.gz -c ID KGL1_renam.vcf.gz -Oz -o KGL1_rsID_match.vcf.gz
+bcftools index KGL1_rsID_match.vcf.gz
+
+#Extract novel variants (no rsID)
+bcftools view -i 'ID=="."' KGL1_rsID_match.vcf.gz -Oz -o KGL1_novel.vcf.gz
+
+#Extract rsID matched variants
+bcftools view -i 'ID!="."' KGL1_rsID_match.vcf.gz -Oz -o KGL1_rsid.vcf.gz
+
+
+

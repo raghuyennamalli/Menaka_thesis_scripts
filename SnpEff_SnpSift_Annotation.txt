@@ -1,0 +1,5 @@
+#SnpEff Annotation
+java -jar snpEff/snpEff.jar -v -stats GirL1_Indels_norm.html BosTau.2p0 /home/ragothaman/cattle_genomics/variant_gatk/variants/GirL1_Indels_norm.vcf > /home/ragothaman/cattle_genomics/variant_gatk/snpeff_Annot/GirL1_Indels_annot.vcf
+
+#Extraction the significant annotated information with snpSift
+cat /home/ragothaman/cattle_genomics/variant_gatk/snpeff_Annot/GirL1_SNPs_annot.vcf | /home/ragothaman/cattle_genomics/snpEff/scripts/_OLD/vcfEffOnePerLine.pl | java -jar /home/ragothaman/cattle_genomics/snpEff/SnpSift.jar extractFields - CHROM POS REF ALT "ANN[*].GENE" "ANN[*].EFFECT" "ANN[*].IMPACT" "GEN[*].GT" > /home/ragothaman/cattle_genomics/variant_gatk/snpeff_Annot/Final_Extract/GirL1_SNPs_annot.tsv

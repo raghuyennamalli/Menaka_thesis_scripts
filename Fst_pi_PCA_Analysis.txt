@@ -1,0 +1,66 @@
+#To calculate between two populations
+vcftools --vcf All_samples_merged.vcf --weir-fst-pop indicine.txt --weir-fst-pop taurine.txt --out indicine_vs_taurine
+
+#To see genotype missing individuals
+vcftools --vcf All_samples_merged.vcf --missing-indv
+
+#To retain 90% of samples have genotype info
+vcftools --vcf All_samples_merged.vcf --max-missing 0.9 --recode --out filtered_data
+
+#To obtain allele frequencies
+vcftools --vcf filtered_data.recode.vcf --freq --out allele_frequencies
+
+#Remove SNPs with MAF <= 0.05
+vcftools --vcf filtered_data.recode.vcf --maf 0.05 --recode --out maf_filtered
+
+#Calculate HWE p-values
+vcftools --vcf input.vcf --hardy
+
+#Extract passing SNPs (P_HWE > 0.001)
+awk '$6 > 0.001' out.hwe | grep -v CHR | awk '{print $1"\t"$2}' > hwe_pass_snps.txt
+
+#Filter your VCF using these SNP positions
+vcftools --vcf input.vcf --positions hwe_pass_snps.txt --recode --out hwe_filtered
+
+# To filter the high quality variants
+vcftools --vcf All_samples_merged.vcf --max-missing 0.9 --maf 0.05 --hwe 0.001 --recode --recode-INFO-all --out high_quality_snps
+
+#To calculate between three sets of pop
+vcftools --vcf high_quality_snps.recode.vcf --weir-fst-pop indicine.txt --weir-fst-pop taurine.txt --weir-fst-pop crossbred.txt --out final_ind_tau_cros_fst 
+
+#Fst with sliding window
+vcftools --vcf high_quality_snps.recode.vcf --weir-fst-pop indicine.txt --weir-fst-pop taurine.txt --weir-fst-pop taurine.txt --fst-window-size 50000 --fst-window-step 20000 --out fst_windowed_ind_tau
+
+#To caluclate nuncelotide diversity with sliding window -Indicine, Taurine, Crossbred
+vcftools --vcf high_quality_snps.recode.vcf --keep indicine.txt --window-pi 50000 --window-pi-step 20000 --out pi_out/indicine_pi
+vcftools --vcf high_quality_snps.recode.vcf --keep taurine.txt --window-pi 50000 --window-pi-step 20000 --out pi_out/taurine_pi
+vcftools --vcf high_quality_snps.recode.vcf --keep crossbred.txt --window-pi 50000 --window-pi-step 20000 --out pi_out/crossbred_pi
+
+#QC - PLINK
+
+#Convert .vcf to plink format
+plink --vcf All_samples_merged.vcf --make-bed --allow-extra-chr --out 18Cattle_SNPs
+
+#Check missing genotype across the samples
+plink --bfile 18Cattle_SNPs --missing --allow-extra-chr --out sample_missing
+
+#Remove SNPs genotyped in <90% samples
+plink --bfile 18Cattle_SNPs --geno 0.10 --make-bed --allow-extra-chr --out 18Cattle_SNPs_95GT
+
+#Remove SNPs with MAF <= 0.05
+plink --bfile 18Cattle_SNPs_95GT --maf 0.05 --make-bed --allow-extra-chr --out 18Cattle_maf_filtered
+
+#Remove SNPs failing HWE test
+plink --bfile 18Cattle_maf_filtered --hwe 0.001 --make-bed --allow-extra-chr --out 18Cattle_hwe_filtered
+
+#Count GT and P-value for each SNP
+plink --bfile 18Cattle_SNPs --hardy --allow-extra-chr
+
+#Combine all the commands to run QC using Plink
+plink --bfile 18Cattle_SNPs --geno 0.10 --maf 0.05 -hwe 0.001 --make-bed --allow-extra-chr --out final_filtered
+
+#Convert plink to .vcf format
+plink --bfile 18Cattle_SNPs_filtered --recode vcf --out 18Cattle_SNPs_filtered --allow-extra-chr
+
+#To Calculate PCA
+plink --bfile 18Cattle_SNPs --pca --allow-extra-chr --out 18Cattle_SNP_PCA

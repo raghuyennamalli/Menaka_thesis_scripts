@@ -1,0 +1,1 @@
+quast reference.fasta -o ref_qulaity_stat

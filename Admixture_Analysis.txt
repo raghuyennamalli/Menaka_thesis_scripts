@@ -1,0 +1,38 @@
+#To perform linkage disequilibrium
+plink --bfile filt_snp_nohwe --indep-pairwise 50 5 0.2 --allow-extra-chr --out pruned
+
+#To prune only independent SNPs
+plink --bfile filt_snp_nohwe --extract pruned.prune.in --make-bed --allow-extra-chr --out snps_pruned
+
+#To include the SNPs IDs
+awk 'BEGIN{OFS="\t"} {$2 = "rm" NR; print}' snps_pruned.bim > snps_pruned_unique.bim
+
+#To move with raw one
+mv snps_pruned.bim snps_pruned.bim.bak
+mv snps_pruned_unique.bim snps_pruned.bim
+
+#To view the few line of .bim file
+cut -f1 snps_pruned.bim | sort -u | head
+
+#To remove the unplaced scaffold, MT, X, and Y region
+awk '$1 ~ /^NC_0/ && $1 != "NC_006853.1" && $1 != "NC_037357.1" && $1 != "NC_082638.1"' snps_pruned.bim > autosomes.bim
+
+#To extract SNP ID
+cut -f2 autosomes.bim > autosome_snps.txt
+
+#To extract the SNPs fall in that SNP category
+plink --bfile snps_pruned --extract autosome_snps.txt --make-bed --out snps_mapped --chr-set 29 --allow-extra-chr
+
+#To map with chromosome number
+awk 'NR==FNR{a[$1]=$2; next} {if($1 in a) $1=a[$1]; print}' OFS="\t" mapping.txt snps_mapped.bim > snps_pruned_mapped.bim
+
+#To copy with original .bim file
+cp snps_pruned_mapped.bim snps_mapped.bim
+
+#To perform admixture analysis
+admixture --cv snps_mapped.bed 2
+admixture --cv snps_mapped.bed 3
+admixture --cv snps_mapped.bed 4
+admixture --cv snps_mapped.bed 5
+admixture --cv snps_mapped.bed 6
+admixture --cv snps_mapped.bed 1

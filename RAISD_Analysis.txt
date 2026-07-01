@@ -1,0 +1,8 @@
+#To get the individual samples from pooled variant data
+bcftools view -s TharparkarL1,TharparkarL2,TharparkarL3 All_merged_SNP.vcf -Ov -o Tharparkar.vcf
+
+#To filter the data
+vcftools --vcf Tharparkar.vcf --max-missing 0.9 --maf 0.05 --recode --recode-INFO-all --out Tharparkar_SNPs_filt
+
+#To perform the RAiSD Analysis
+/home/ragothaman/cattle_genomics/RAiSD/raisd-master/RAiSD -n Tharparkar -I Tharparkar_SNPs_filt.recode.vcf -f -L 50000
