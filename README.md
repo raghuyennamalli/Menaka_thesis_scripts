@@ -141,5 +141,6 @@ Contact
 
 Dr. Ragothaman M. Yennamalli
 Associate Professor
-School of Biotechnology
-Jawaharlal Nehru University (JNU), New Delhi, India
+School of Computational and Integrative Sciences
+Jawaharlal Nehru University, New Delhi, India
+ragothaman@jnu.ac.in
